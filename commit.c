@@ -196,6 +196,45 @@ int head_update(const ObjectID *new_commit) {
 int commit_create(const char *message, ObjectID *commit_id_out) {
     // TODO: Implement commit creation
     // (See Lab Appendix for logical steps)
-    (void)message; (void)commit_id_out;
-    return -1;
+
+ObjectID tree_id;
+if (tree_from_index( &tree_id) != 0)
+return -1;
+
+Commit c;
+memset(&c, 0, sizeof(c));
+
+c.tree = tree_id;
+
+ObjectID parent_id;
+if (head_read(&parent_id) == 0) {
+c.has_parent = 1;
+c.parent = parent_id;
+}
+
+strncpy(c.author, pes_author(), sizeof(c.author) - 1);
+strncpy(c.message, message, sizeof(c.message) - 1);
+c.timestamp = time(NULL);
+
+void *raw = NULL;
+size_t raw_len = 0;
+
+if (commit_serialize(&c, &raw, &raw_len) != 0)
+return -1;
+
+ObjectID new_commit;
+if (object_write(OBJ_COMMIT, raw, raw_len, &new_commit) != 0) {
+free(raw);
+return -1;
+}
+
+free(raw);
+
+if (head_update(&new_commit) != 0)
+return -1;
+
+if (commit_id_out)
+*commit_id_out = new_commit;
+
+return 0;
 }
